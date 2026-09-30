@@ -1,200 +1,173 @@
+# All the imports go here
 import cv2
 import numpy as np
+import mediapipe as mp
 from collections import deque
 
-# Trackbar callback
-def nothing(x):
-    pass
 
-# Create HSV control window
-cv2.namedWindow("Color Detectors")
-
-cv2.createTrackbar("Upper Hue", "Color Detectors", 153, 180, nothing)
-cv2.createTrackbar("Upper Saturation", "Color Detectors", 255, 255, nothing)
-cv2.createTrackbar("Upper Value", "Color Detectors", 255, 255, nothing)
-
-cv2.createTrackbar("Lower Hue", "Color Detectors", 64, 180, nothing)
-cv2.createTrackbar("Lower Saturation", "Color Detectors", 72, 255, nothing)
-cv2.createTrackbar("Lower Value", "Color Detectors", 49, 255, nothing)
-
-# Store drawing points
+# Giving different arrays to handle colour points of different colour
 bpoints = [deque(maxlen=1024)]
 gpoints = [deque(maxlen=1024)]
 rpoints = [deque(maxlen=1024)]
 ypoints = [deque(maxlen=1024)]
 
+
+# These indexes will be used to mark the points in particular arrays of specific colour
 blue_index = 0
 green_index = 0
 red_index = 0
 yellow_index = 0
 
-# Kernel for image processing
+#The kernel to be used for dilation purpose 
 kernel = np.ones((5,5),np.uint8)
 
-# Colors
-colors = [(255,0,0),(0,255,0),(0,0,255),(0,255,255)]
+colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255)]
 colorIndex = 0
 
-# Create white canvas
+# Here is code for Canvas setup
 paintWindow = np.zeros((471,636,3)) + 255
+paintWindow = cv2.rectangle(paintWindow, (40,1), (140,65), (0,0,0), 2)
+paintWindow = cv2.rectangle(paintWindow, (160,1), (255,65), (255,0,0), 2)
+paintWindow = cv2.rectangle(paintWindow, (275,1), (370,65), (0,255,0), 2)
+paintWindow = cv2.rectangle(paintWindow, (390,1), (485,65), (0,0,255), 2)
+paintWindow = cv2.rectangle(paintWindow, (505,1), (600,65), (0,255,255), 2)
 
-paintWindow = cv2.rectangle(paintWindow,(40,1),(140,65),(0,0,0),2)
-paintWindow = cv2.rectangle(paintWindow,(160,1),(255,65),colors[0],-1)
-paintWindow = cv2.rectangle(paintWindow,(275,1),(370,65),colors[1],-1)
-paintWindow = cv2.rectangle(paintWindow,(390,1),(485,65),colors[2],-1)
-paintWindow = cv2.rectangle(paintWindow,(505,1),(600,65),colors[3],-1)
+cv2.putText(paintWindow, "CLEAR", (49, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.putText(paintWindow, "BLUE", (185, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.putText(paintWindow, "GREEN", (298, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.putText(paintWindow, "RED", (420, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.putText(paintWindow, "YELLOW", (520, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.namedWindow('Paint', cv2.WINDOW_AUTOSIZE)
 
-cv2.putText(paintWindow,"CLEAR",(49,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,0),2)
-cv2.putText(paintWindow,"BLUE",(185,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-cv2.putText(paintWindow,"GREEN",(298,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-cv2.putText(paintWindow,"RED",(420,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-cv2.putText(paintWindow,"YELLOW",(520,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(150,150,150),2)
 
-cv2.namedWindow("Paint")
+# initialize mediapipe
+mpHands = mp.solutions.hands
+hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
+mpDraw = mp.solutions.drawing_utils
 
-# Camera (Mac compatible)
-cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
 
-while True:
-
+# Initialize the webcam
+cap = cv2.VideoCapture(0)
+ret = True
+while ret:
+    # Read each frame from the webcam
     ret, frame = cap.read()
 
-    if not ret:
-        print("Camera not detected")
-        break
+    x, y, c = frame.shape
 
-    frame = cv2.flip(frame,1)
+    # Flip the frame vertically
+    frame = cv2.flip(frame, 1)
+    #hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    frame = cv2.rectangle(frame, (40,1), (140,65), (0,0,0), 2)
+    frame = cv2.rectangle(frame, (160,1), (255,65), (255,0,0), 2)
+    frame = cv2.rectangle(frame, (275,1), (370,65), (0,255,0), 2)
+    frame = cv2.rectangle(frame, (390,1), (485,65), (0,0,255), 2)
+    frame = cv2.rectangle(frame, (505,1), (600,65), (0,255,255), 2)
+    cv2.putText(frame, "CLEAR", (49, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "BLUE", (185, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "GREEN", (298, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "RED", (420, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "YELLOW", (520, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    #frame = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-    # Get HSV values
-    u_hue = cv2.getTrackbarPos("Upper Hue","Color Detectors")
-    u_sat = cv2.getTrackbarPos("Upper Saturation","Color Detectors")
-    u_val = cv2.getTrackbarPos("Upper Value","Color Detectors")
+    # Get hand landmark prediction
+    result = hands.process(framergb)
 
-    l_hue = cv2.getTrackbarPos("Lower Hue","Color Detectors")
-    l_sat = cv2.getTrackbarPos("Lower Saturation","Color Detectors")
-    l_val = cv2.getTrackbarPos("Lower Value","Color Detectors")
+    # post process the result
+    if result.multi_hand_landmarks:
+        landmarks = []
+        for handslms in result.multi_hand_landmarks:
+            for lm in handslms.landmark:
+                # # print(id, lm)
+                # print(lm.x)
+                # print(lm.y)
+                lmx = int(lm.x * 640)
+                lmy = int(lm.y * 480)
 
-    Upper_hsv = np.array([u_hue,u_sat,u_val])
-    Lower_hsv = np.array([l_hue,l_sat,l_val])
+                landmarks.append([lmx, lmy])
 
-    # Draw buttons
-    frame = cv2.rectangle(frame,(40,1),(140,65),(122,122,122),-1)
-    frame = cv2.rectangle(frame,(160,1),(255,65),colors[0],-1)
-    frame = cv2.rectangle(frame,(275,1),(370,65),colors[1],-1)
-    frame = cv2.rectangle(frame,(390,1),(485,65),colors[2],-1)
-    frame = cv2.rectangle(frame,(505,1),(600,65),colors[3],-1)
 
-    cv2.putText(frame,"CLEAR",(49,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-    cv2.putText(frame,"BLUE",(185,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-    cv2.putText(frame,"GREEN",(298,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-    cv2.putText(frame,"RED",(420,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
-    cv2.putText(frame,"YELLOW",(520,33),cv2.FONT_HERSHEY_SIMPLEX,0.5,(150,150,150),2)
+            # Drawing landmarks on frames
+            mpDraw.draw_landmarks(frame, handslms, mpHands.HAND_CONNECTIONS)
+        fore_finger = (landmarks[8][0],landmarks[8][1])
+        center = fore_finger
+        thumb = (landmarks[4][0],landmarks[4][1])
+        cv2.circle(frame, center, 3, (0,255,0),-1)
+        print(center[1]-thumb[1])
+        if (thumb[1]-center[1]<30):
+            bpoints.append(deque(maxlen=512))
+            blue_index += 1
+            gpoints.append(deque(maxlen=512))
+            green_index += 1
+            rpoints.append(deque(maxlen=512))
+            red_index += 1
+            ypoints.append(deque(maxlen=512))
+            yellow_index += 1
 
-    # Mask creation
-    mask = cv2.inRange(hsv, Lower_hsv, Upper_hsv)
+        elif center[1] <= 65:
+            if 40 <= center[0] <= 140: # Clear Button
+                bpoints = [deque(maxlen=512)]
+                gpoints = [deque(maxlen=512)]
+                rpoints = [deque(maxlen=512)]
+                ypoints = [deque(maxlen=512)]
 
-    mask = cv2.erode(mask, kernel, iterations=1)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.dilate(mask, kernel, iterations=1)
+                blue_index = 0
+                green_index = 0
+                red_index = 0
+                yellow_index = 0
 
-    # Find contours
-    cnts,_ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    center = None
-
-    if len(cnts) > 0:
-
-        cnt = sorted(cnts, key=cv2.contourArea, reverse=True)[0]
-
-        ((x,y),radius) = cv2.minEnclosingCircle(cnt)
-
-        # Ignore small noise
-        if radius > 10:
-
-            cv2.circle(frame,(int(x),int(y)),int(radius),(0,255,255),2)
-
-            M = cv2.moments(cnt)
-
-            if M["m00"] != 0:
-                center = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
-
-            if center:
-
-                if center[1] <= 65:
-
-                    if 40 <= center[0] <= 140:
-                        bpoints=[deque(maxlen=512)]
-                        gpoints=[deque(maxlen=512)]
-                        rpoints=[deque(maxlen=512)]
-                        ypoints=[deque(maxlen=512)]
-
-                        blue_index=green_index=red_index=yellow_index=0
-
-                        paintWindow[67:,:,:]=255
-
-                    elif 160 <= center[0] <= 255:
-                        colorIndex = 0
-
-                    elif 275 <= center[0] <= 370:
-                        colorIndex = 1
-
-                    elif 390 <= center[0] <= 485:
-                        colorIndex = 2
-
-                    elif 505 <= center[0] <= 600:
-                        colorIndex = 3
-
-                else:
-
-                    if colorIndex == 0:
-                        bpoints[blue_index].appendleft(center)
-
-                    elif colorIndex == 1:
-                        gpoints[green_index].appendleft(center)
-
-                    elif colorIndex == 2:
-                        rpoints[red_index].appendleft(center)
-
-                    elif colorIndex == 3:
-                        ypoints[yellow_index].appendleft(center)
-
+                paintWindow[67:,:,:] = 255
+            elif 160 <= center[0] <= 255:
+                    colorIndex = 0 # Blue
+            elif 275 <= center[0] <= 370:
+                    colorIndex = 1 # Green
+            elif 390 <= center[0] <= 485:
+                    colorIndex = 2 # Red
+            elif 505 <= center[0] <= 600:
+                    colorIndex = 3 # Yellow
+        else :
+            if colorIndex == 0:
+                bpoints[blue_index].appendleft(center)
+            elif colorIndex == 1:
+                gpoints[green_index].appendleft(center)
+            elif colorIndex == 2:
+                rpoints[red_index].appendleft(center)
+            elif colorIndex == 3:
+                ypoints[yellow_index].appendleft(center)
+    # Append the next deques when nothing is detected to avois messing up
     else:
-
         bpoints.append(deque(maxlen=512))
         blue_index += 1
-
         gpoints.append(deque(maxlen=512))
         green_index += 1
-
         rpoints.append(deque(maxlen=512))
         red_index += 1
-
         ypoints.append(deque(maxlen=512))
         yellow_index += 1
 
-    # Draw lines
-    points = [bpoints,gpoints,rpoints,ypoints]
-
+    # Draw lines of all the colors on the canvas and frame
+    points = [bpoints, gpoints, rpoints, ypoints]
+    # for j in range(len(points[0])):
+    #         for k in range(1, len(points[0][j])):
+    #             if points[0][j][k - 1] is None or points[0][j][k] is None:
+    #                 continue
+    #             cv2.line(paintWindow, points[0][j][k - 1], points[0][j][k], colors[0], 2)
     for i in range(len(points)):
         for j in range(len(points[i])):
-            for k in range(1,len(points[i][j])):
-
-                if points[i][j][k-1] is None or points[i][j][k] is None:
+            for k in range(1, len(points[i][j])):
+                if points[i][j][k - 1] is None or points[i][j][k] is None:
                     continue
+                cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 2)
+                cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 2)
 
-                cv2.line(frame, points[i][j][k-1], points[i][j][k], colors[i],2)
-                cv2.line(paintWindow, points[i][j][k-1], points[i][j][k], colors[i],2)
+    cv2.imshow("Output", frame) 
+    cv2.imshow("Paint", paintWindow)
 
-    # Show windows
-    cv2.imshow("Tracking",frame)
-    cv2.imshow("Paint",paintWindow)
-    cv2.imshow("Mask",mask)
-
-    # Quit
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    if cv2.waitKey(1) == ord('q'):
         break
 
+# release the webcam and destroy all active windows
 cap.release()
 cv2.destroyAllWindows()
